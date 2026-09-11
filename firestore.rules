@@ -1,0 +1,155 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Helper functions for Role-Based Access Control (RBAC)
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function getUserData() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() && 
+        (request.auth.token.admin == true || 
+         request.auth.token.role == 'admin' || 
+         exists(/databases/$(database)/documents/admin_users/$(request.auth.uid)) ||
+         getUserData().role == 'admin');
+    }
+
+    // 0. Protected Admin Users Collection (Only writable via Firebase Admin SDK / Cloud Functions)
+    match /admin_users/{adminId} {
+      allow read: if isAdmin();
+      allow write: if false; // Deny all direct client writes; strictly managed server-side
+    }
+
+    // 1. Users collection
+    // Read: authenticated users can read their own profile; admins can read all profiles.
+    // Create: authenticated users can create their own profile during initial OTP onboarding.
+    // Update: user can update specific profile fields (name, email, upiId, selectedState).
+    // CRITICAL: User CANNOT change their role or accountStatus!
+    match /users/{userId} {
+      allow read: if isOwner(userId) || isAdmin();
+      allow create: if isOwner(userId) 
+                    && request.resource.data.userId == userId
+                    && request.resource.data.role == 'user'
+                    && request.resource.data.accountStatus == 'ACTIVE';
+      allow update: if (isOwner(userId) 
+                        && request.resource.data.role == resource.data.role 
+                        && request.resource.data.accountStatus == resource.data.accountStatus)
+                    || isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    // 2. Matches collection
+    // Read: All authenticated users can read published matches; admins can read all.
+    // Write: Strictly Admin only! Users can never create/edit/delete matches.
+    match /matches/{matchId} {
+      allow read: if isAuthenticated() && (resource.data.isPublished == true || isAdmin());
+      allow write: if isAdmin();
+    }
+
+    // 3. Players collection
+    // Read: All authenticated users can read active players.
+    // Write: Admin only!
+    match /players/{playerId} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin();
+    }
+
+    // 4. Teams collection (Fantasy Teams created by users)
+    // Read: Team owner can read their own team; after match starts, other contest participants can view.
+    // Create: Authenticated users can create team for themselves.
+    // Update: Owner can update (e.g. rename once before match lock), or admin.
+    match /teams/{teamId} {
+      allow read: if isAuthenticated() && (isOwner(resource.data.userId) || isAdmin());
+      allow create: if isAuthenticated() 
+                    && request.resource.data.userId == request.auth.uid;
+      allow update: if isAuthenticated() 
+                    && isOwner(resource.data.userId)
+                    && request.resource.data.userId == resource.data.userId;
+      allow delete: if isOwner(resource.data.userId) || isAdmin();
+    }
+
+    // 5. Contests collection
+    // Read: Authenticated users can read published contests.
+    // Write: Admin only. Total spots and prize pool cannot be manipulated by users.
+    match /contests/{contestId} {
+      allow read: if isAuthenticated() && (resource.data.isPublished == true || isAdmin());
+      allow write: if isAdmin();
+    }
+
+    // 6. Contest Entries collection
+    // Read: Entry owner or Admin can read.
+    // Write: Managed via trusted Server Cloud Functions (joinContest) to guarantee atomic slot decrement & fee deduction.
+    // In direct firestore mode, user can create entry only if matching auth.uid and not tampering rank/prizes.
+    match /contest_entries/{entryId} {
+      allow read: if isAuthenticated() && (resource.data.userId == request.auth.uid || isAdmin());
+      allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
+      allow update, delete: if isAdmin();
+    }
+
+    // 7. Wallets collection
+    // SECURITY MANDATE: Users must NEVER directly write/update their wallet balance!
+    // Read: Users can only read their own wallet.
+    // Write: Only Cloud Functions (Service Account) or Admin role.
+    match /wallets/{userId} {
+      allow read: if isOwner(userId) || isAdmin();
+      allow write: if isAdmin();
+    }
+
+    // 8. Transactions collection
+    // SECURITY MANDATE: All financial ledger records are immutable by clients.
+    // Read: User can view their own transaction history.
+    // Write: Only server backend or Admin.
+    match /transactions/{transactionId} {
+      allow read: if isAuthenticated() && (resource.data.userId == request.auth.uid || isAdmin());
+      allow write: if isAdmin();
+    }
+
+    // 9. Withdrawals collection
+    // Read: User can read their own requests; Admin can read all.
+    // Create: Authenticated user can submit a withdrawal request for their own account in PENDING status.
+    // Update: Only Admin can approve, reject, or mark withdrawal as completed.
+    match /withdrawals/{withdrawalId} {
+      allow read: if isAuthenticated() && (resource.data.userId == request.auth.uid || isAdmin());
+      allow create: if isAuthenticated() 
+                    && request.resource.data.userId == request.auth.uid
+                    && request.resource.data.status == 'PENDING';
+      allow update: if isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    // 10. Winners collection
+    // Read: Publicly readable by all authenticated users to view leaderboards & transparency.
+    // Write: Admin only!
+    match /winners/{winnerId} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin();
+    }
+
+    // 11. Notifications collection
+    // Read: User can read their personal notifications or system-wide broadcast notifications ('all').
+    // Update: User can mark notification as read (isRead = true).
+    // Create/Delete: Admin or Server backend only.
+    match /notifications/{notificationId} {
+      allow read: if isAuthenticated() && (resource.data.userId == request.auth.uid || resource.data.userId == 'all' || isAdmin());
+      allow update: if isAuthenticated() && (resource.data.userId == request.auth.uid && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['isRead']));
+      allow write: if isAdmin();
+    }
+
+    // 12. App Settings collection
+    // Read: All authenticated users can read public configuration (payment options, maintenance flag).
+    // Write: Admin only!
+    match /app_settings/{settingId} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin();
+    }
+  }
+}

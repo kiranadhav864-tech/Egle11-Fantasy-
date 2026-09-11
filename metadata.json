@@ -1,0 +1,7 @@
+{
+  "name": "Egle11",
+  "description": "Backend foundation for Egle11 cricket fantasy gaming with Firebase Firestore, Auth, role-based security rules, server wallet transactions, contests, and cricket API.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
+

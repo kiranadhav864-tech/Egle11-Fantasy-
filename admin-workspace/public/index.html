@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Egle11 | Dedicated Admin Workspace & Operations Console</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+</head>
+<body>
+  <!-- Login Gate Modal -->
+  <div id="login-modal" class="modal-backdrop">
+    <div class="modal-card">
+      <div class="brand-badge">EGLE11</div>
+      <h2>Admin Operations Portal</h2>
+      <p class="subtitle">Enter your Admin Master Key or Authenticated Admin Token</p>
+      
+      <div class="form-group">
+        <label>Admin Master Key / Secret</label>
+        <input type="password" id="admin-key-input" placeholder="Enter secure key (e.g. EGLE11_ADMIN_SECURE)" value="EGLE11_ADMIN_SECURE">
+      </div>
+
+      <div id="login-error" class="error-banner" style="display: none;"></div>
+
+      <button id="login-btn" class="btn btn-gold btn-block">Authorize & Enter Console</button>
+      <p class="security-notice">🔒 Privileged Workspace: Client APK users have zero access to this surface.</p>
+    </div>
+  </div>
+
+  <!-- Main App Shell -->
+  <div class="app-layout">
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <div class="sidebar-header">
+        <div class="logo-box">
+          <span class="logo-icon">🏏</span>
+          <div>
+            <div class="logo-title">EGLE11 ADMIN</div>
+            <div class="logo-sub">Operations Workspace</div>
+          </div>
+        </div>
+      </div>
+
+      <nav class="nav-menu">
+        <button class="nav-item active" data-tab="overview">
+          <span class="nav-icon">📊</span> Overview & Metrics
+        </button>
+        <button class="nav-item" data-tab="matches">
+          <span class="nav-icon">🏏</span> Fixtures & Matches
+        </button>
+        <button class="nav-item" data-tab="contests">
+          <span class="nav-icon">🏆</span> Contests & Prizes
+        </button>
+        <button class="nav-item" data-tab="withdrawals">
+          <span class="nav-icon">💸</span> UPI Withdrawals
+        </button>
+        <button class="nav-item" data-tab="users">
+          <span class="nav-icon">👥</span> Users & Wallets
+        </button>
+        <button class="nav-item" data-tab="settings">
+          <span class="nav-icon">⚙️</span> Platform Settings
+        </button>
+        <button class="nav-item" data-tab="diagnostics">
+          <span class="nav-icon">🔍</span> Firebase Diagnostics
+        </button>
+      </nav>
+
+      <div class="sidebar-footer">
+        <div class="status-indicator">
+          <span class="dot live"></span>
+          <span id="backend-status-text">Backend Connected</span>
+        </div>
+        <button id="logout-btn" class="btn-logout">Logout</button>
+      </div>
+    </aside>
+
+    <!-- Main Content Area -->
+    <main class="main-content">
+      <!-- Top Bar -->
+      <header class="top-bar">
+        <div class="page-title-group">
+          <h1 id="page-title">Overview & Metrics</h1>
+          <span id="current-env-badge" class="badge badge-gold">Cloud Firestore</span>
+        </div>
+
+        <div class="top-bar-actions">
+          <span class="user-pill">
+            <span class="avatar">👑</span>
+            <span id="admin-name-display">Super Administrator</span>
+          </span>
+        </div>
+      </header>
+
+      <!-- Content Views Container -->
+      <div class="content-body">
+
+        <!-- TAB: OVERVIEW -->
+        <section id="tab-overview" class="tab-pane active">
+          <div class="stats-grid">
+            <div class="stat-card">
+              <div class="stat-label">Total Matches</div>
+              <div class="stat-value" id="stat-matches">-</div>
+              <div class="stat-sub">Live & Upcoming Fixtures</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-label">Active Contests</div>
+              <div class="stat-value" id="stat-contests">-</div>
+              <div class="stat-sub">Mega & Head-to-Head leagues</div>
+            </div>
+            <div class="stat-card highlight">
+              <div class="stat-label">Pending Withdrawals</div>
+              <div class="stat-value" id="stat-withdrawals">-</div>
+              <div class="stat-sub">Awaiting UPI review & approval</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-label">Registered Users</div>
+              <div class="stat-value" id="stat-users">-</div>
+              <div class="stat-sub">Verified Indian Phone accounts</div>
+            </div>
+          </div>
+
+          <div class="card mt-4">
+            <div class="card-header">
+              <h3>System Architecture & Security Guardrails</h3>
+            </div>
+            <div class="card-body">
+              <div class="info-grid">
+                <div class="info-item">
+                  <strong>Separate Codebase:</strong>
+                  <p>This Admin Workspace is decoupled from the Android client app and deployed independently.</p>
+                </div>
+                <div class="info-item">
+                  <strong>Privileged Service Layer:</strong>
+                  <p>Uses Firebase Admin SDK and server-side Cloud Functions. No service account keys in client code.</p>
+                </div>
+                <div class="info-item">
+                  <strong>Firestore Security Rules:</strong>
+                  <p>Client writes to financial ledgers, match results, and wallets are strictly blocked at database rule level.</p>
+                </div>
+                <div class="info-item">
+                  <strong>Explicit Admin Allowlist:</strong>
+                  <p>Admin privileges granted only through Firebase Custom Claims or protected <code>admin_users</code> collection.</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- TAB: MATCHES -->
+        <section id="tab-matches" class="tab-pane">
+          <div class="toolbar">
+            <h2>Cricket Fixtures</h2>
+            <button class="btn btn-gold" id="btn-open-create-match">+ Add New Match</button>
+          </div>
+          <div class="table-responsive">
+            <table class="data-table" id="matches-table">
+              <thead>
+                <tr>
+                  <th>Match ID</th>
+                  <th>Teams</th>
+                  <th>Series</th>
+                  <th>Venue</th>
+                  <th>Status</th>
+                  <th>Published</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="matches-tbody">
+                <tr><td colspan="7" class="text-center">Loading matches...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <!-- TAB: CONTESTS -->
+        <section id="tab-contests" class="tab-pane">
+          <div class="toolbar">
+            <h2>Contest Management</h2>
+            <button class="btn btn-gold" id="btn-open-create-contest">+ Create Contest</button>
+          </div>
+          <div class="table-responsive">
+            <table class="data-table" id="contests-table">
+              <thead>
+                <tr>
+                  <th>Contest Title</th>
+                  <th>Match</th>
+                  <th>Entry Fee</th>
+                  <th>Prize Pool</th>
+                  <th>Spots (Filled / Total)</th>
+                  <th>Status</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="contests-tbody">
+                <tr><td colspan="7" class="text-center">Loading contests...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <!-- TAB: WITHDRAWALS -->
+        <section id="tab-withdrawals" class="tab-pane">
+          <div class="toolbar">
+            <h2>UPI Withdrawal Approvals & Payouts</h2>
+            <span class="text-muted">Review, approve, or reject user payout requests</span>
+          </div>
+          <div class="table-responsive">
+            <table class="data-table" id="withdrawals-table">
+              <thead>
+                <tr>
+                  <th>Request ID</th>
+                  <th>User Details</th>
+                  <th>Amount</th>
+                  <th>UPI ID</th>
+                  <th>Requested At</th>
+                  <th>Status</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="withdrawals-tbody">
+                <tr><td colspan="7" class="text-center">Loading withdrawals...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <!-- TAB: USERS -->
+        <section id="tab-users" class="tab-pane">
+          <div class="toolbar">
+            <h2>User Management & Verification</h2>
+          </div>
+          <div class="table-responsive">
+            <table class="data-table" id="users-table">
+              <thead>
+                <tr>
+                  <th>User ID</th>
+                  <th>Name</th>
+                  <th>Mobile Number</th>
+                  <th>Email</th>
+                  <th>State</th>
+                  <th>Role</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody id="users-tbody">
+                <tr><td colspan="7" class="text-center">Loading users...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <!-- TAB: SETTINGS -->
+        <section id="tab-settings" class="tab-pane">
+          <div class="toolbar">
+            <h2>Platform & Gateway Settings</h2>
+          </div>
+          <div class="card">
+            <div class="card-body">
+              <form id="settings-form">
+                <div class="form-row">
+                  <div class="form-group">
+                    <label>Minimum Deposit (₹)</label>
+                    <input type="number" id="setting-min-deposit" value="10">
+                  </div>
+                  <div class="form-group">
+                    <label>Minimum Withdrawal (₹)</label>
+                    <input type="number" id="setting-min-withdrawal" value="100">
+                  </div>
+                  <div class="form-group">
+                    <label>Max Daily Withdrawal (₹)</label>
+                    <input type="number" id="setting-max-withdrawal" value="50000">
+                  </div>
+                </div>
+
+                <div class="form-group checkbox-group">
+                  <label>
+                    <input type="checkbox" id="setting-maintenance"> Enable Maintenance Mode (Temporarily block user gameplay)
+                  </label>
+                </div>
+
+                <div class="form-group">
+                  <label>Maintenance Banner Message</label>
+                  <input type="text" id="setting-maintenance-msg" value="Egle11 is currently undergoing scheduled platform upgrades.">
+                </div>
+
+                <button type="submit" class="btn btn-gold">Save Platform Settings</button>
+              </form>
+            </div>
+          </div>
+        </section>
+
+        <!-- TAB: DIAGNOSTICS -->
+        <section id="tab-diagnostics" class="tab-pane">
+          <div class="toolbar">
+            <h2>Firebase Connectivity & Diagnostic Overview</h2>
+            <button class="btn btn-outline" id="btn-refresh-diag">Refresh Diagnostics</button>
+          </div>
+
+          <div class="card">
+            <div class="card-header">
+              <h3>Live Service Health Check</h3>
+            </div>
+            <div class="card-body">
+              <pre id="diagnostics-json" class="code-block">Checking backend connectivity...</pre>
+            </div>
+          </div>
+
+          <div class="card mt-4">
+            <div class="card-header">
+              <h3>Admin Provisioning Instructions</h3>
+            </div>
+            <div class="card-body">
+              <p>To provision additional administrators with verified Custom Claims:</p>
+              <pre class="code-block">node scripts/provision-admin.js &lt;FIREBASE_UID&gt; &lt;EMAIL&gt; &lt;PHONE&gt;</pre>
+            </div>
+          </div>
+        </section>
+
+      </div>
+    </main>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
